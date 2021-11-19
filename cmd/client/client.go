@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/streadway/amqp"
@@ -18,6 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to open a channel")
 	}
+
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
@@ -32,27 +34,19 @@ func main() {
 		log.Fatal("failed to declare a queue")
 	}
 
-	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	if err != nil {
-		log.Fatal("failed to register a consumer")
-	}
+	for i := 0; i < 10; i++ {
+		msg := fmt.Sprintf("GOLANG NINJA %d", i)
 
-	forever := make(chan bool)
-
-	go func() {
-		for d := range msgs {
-			log.Printf("Received a message: %s", d.Body)
+		if err := ch.Publish(
+			"",     // exchange
+			q.Name, // routing key
+			false,  // mandatory
+			false,  // immediate
+			amqp.Publishing{
+				ContentType: "text/plain",
+				Body:        []byte(msg),
+			}); err != nil {
+			log.Fatal("failed to declare a queue")
 		}
-	}()
-
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
-	<-forever
+	}
 }
